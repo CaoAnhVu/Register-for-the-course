@@ -31,9 +31,9 @@
                             <th>Mã Học Phần</th>
                             <th>Tên Học Phần</th>
                             <th>Số Tín Chỉ</th>
-                            <th>Số lượng dự kiến</th>
+                            <th>Số lượng cho phép</th>
                             <th>Đã đăng ký</th>
-                            <th>Còn lại</th>
+                            <th>Số lượng dự kiến(Còn lại)</th>
                             <th class="text-center">Thao Tác</th>
                         </tr>
                     </thead>
