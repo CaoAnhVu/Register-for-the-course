@@ -6,7 +6,7 @@ class HocPhan {
     public $MaHP;
     public $TenHP;
     public $SoTinChi;
-    public $SoLuongDuKien;  // Thêm trường số lượng dự kiến
+    public $SoLuongDuKien;
 
     public function __construct($db) {
         $this->conn = $db;
@@ -32,6 +32,7 @@ class HocPhan {
             $this->MaHP = $row['MaHP'];
             $this->TenHP = $row['TenHP'];
             $this->SoTinChi = $row['SoTinChi'];
+            $this->SoLuongDuKien = $row['SoLuongDuKien'];
             return true;
         }
         return false;
@@ -44,33 +45,42 @@ class HocPhan {
                     (SELECT COUNT(*) FROM ChiTietDangKy ctdk 
                      JOIN DangKy dk ON ctdk.MaDK = dk.MaDK 
                      WHERE ctdk.MaHP = hp.MaHP), 0
-                  ) as DaDangKy,
-                  99 as SoLuongDuKien
+                  ) as SoLuongDaDangKy
                 FROM " . $this->table_name . " hp";
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         return $stmt;
     }
 
+    // Cập nhật số lượng dự kiến vào database
     public function updateSoLuongDuKien($maHP, $soLuong) {
-        // Thực tế, chúng ta cần thêm field SoLuongDuKien vào bảng HocPhan
-        // Tuy nhiên, bài tập này đã định nghĩa sẵn cấu trúc bảng
-        // Nên chúng ta sẽ giả lập bằng cách lưu vào session
-        if (!isset($_SESSION['SoLuongDuKien'])) {
-            $_SESSION['SoLuongDuKien'] = [];
-        }
+        $query = "UPDATE " . $this->table_name . " SET SoLuongDuKien = ? WHERE MaHP = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(1, $soLuong);
+        $stmt->bindParam(2, $maHP);
         
-        $_SESSION['SoLuongDuKien'][$maHP] = $soLuong;
-        return true;
+        if($stmt->execute()) {
+            return true;
+        }
+        return false;
     }
 
+    // Giảm số lượng dự kiến khi có đăng ký mới (không sử dụng)
+    // Thay vào đó, chúng ta dùng SoLuongDaDangKy để tính toán số lượng còn lại
+    // Vì SoLuongDuKien là tổng số lượng sinh viên có thể đăng ký học phần
+    
     public function getSoLuongDuKien($maHP) {
-        if (isset($_SESSION['SoLuongDuKien']) && isset($_SESSION['SoLuongDuKien'][$maHP])) {
-            return $_SESSION['SoLuongDuKien'][$maHP];
-        }
+        $query = "SELECT SoLuongDuKien FROM " . $this->table_name . " WHERE MaHP = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(1, $maHP);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
+        if($result) {
+            return $result['SoLuongDuKien'];
+        }
         // Giá trị mặc định
-        return 99;  // Giả sử mỗi học phần có 99 chỗ
+        return 40;  // Giả sử mỗi học phần có 40 chỗ mặc định
     }
 
     public function getSoLuongDaDangKy($maHP) {
@@ -84,6 +94,14 @@ class HocPhan {
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
         return $result['total'];
+    }
+    
+    // Kiểm tra còn chỗ trống không
+    public function checkAvailability($maHP) {
+        $soLuongDuKien = $this->getSoLuongDuKien($maHP);
+        $soLuongDaDangKy = $this->getSoLuongDaDangKy($maHP);
+        
+        return ($soLuongDaDangKy < $soLuongDuKien);
     }
 }
 ?>

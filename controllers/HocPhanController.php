@@ -42,21 +42,34 @@ public function register($hpId) {
     }
     
     try {
+        // Kiểm tra nếu còn chỗ trống
+        if (!$this->hocPhan->checkAvailability($hpId)) {
+            $_SESSION['error_message'] = "Lớp học phần đã đầy!";
+            header("Location: index.php?controller=HocPhan&action=index");
+            exit();
+        }
+        
+        // Kiểm tra nếu đã đăng ký
         $maSV = $_SESSION['MaSV'];
         $this->dangKy->MaSV = $maSV;
-        $this->dangKy->NgayDK = date('Y-m-d'); // Đặt ngày hiện tại
         
-        // Sử dụng phương thức mới để đăng ký học phần
+        if ($this->dangKy->hasRegistration() && $this->dangKy->isRegistered($hpId)) {
+            $_SESSION['error_message'] = "Học phần này bạn đã đăng ký trước đó!";
+            header("Location: index.php?controller=HocPhan&action=index");
+            exit();
+        }
+        
+        // Tiến hành đăng ký
+        $this->dangKy->NgayDK = date('Y-m-d');
         if ($this->dangKy->registerCourse($hpId)) {
             $_SESSION['success_message'] = "Đăng ký học phần thành công!";
         } else {
-            $_SESSION['error_message'] = "Học phần đã được đăng ký hoặc có lỗi xảy ra!";
+            $_SESSION['error_message'] = "Có lỗi xảy ra khi đăng ký học phần!";
         }
     } catch (PDOException $e) {
         $_SESSION['error_message'] = "Lỗi: " . $e->getMessage();
     }
     
-    // Chuyển hướng đến trang đăng ký học phần
     header("Location: index.php?controller=DangKy&action=index");
     exit();
 }
